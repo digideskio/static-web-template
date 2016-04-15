@@ -1,0 +1,152 @@
+import com.github.jknack.handlebars.Context
+import com.github.jknack.handlebars.EscapingStrategy
+import com.github.jknack.handlebars.Handlebars
+import com.github.jknack.handlebars.Template
+import com.github.jknack.handlebars.context.MapValueResolver
+import org.apache.commons.io.FilenameUtils
+
+import static groovy.io.FileType.FILES
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.github.jknack:handlebars:4.0.5'
+        classpath 'org.apache.commons:commons-lang3:3.4'
+        classpath 'commons-io:commons-io:2.4'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'idea'
+
+class WebTask extends DefaultTask {
+
+    void createOtherHtml(Map<String, String> mapping) {
+        File root = new File("src/")
+        if (!root.exists()) {
+            throw new RuntimeException("'src' folder must exist in you project. It is place you store all project files.")
+        }
+
+        root.eachDir {
+            String dirName = it.name
+            logger.info("Processing content of directory: $it.canonicalPath")
+            if (it.isHidden() || dirName.startsWith(".") || dirName == 'build' || dirName == 'assets') {
+                return false
+            }
+            List<File> files = it.listFiles(new FilenameFilter() {
+                boolean accept(File dir, String name) {
+                    return !name.startsWith('_') && name.endsWith(".html")
+                }
+            })
+
+            logger.info("These files being processed: $files")
+            files.each {
+                String outputDir = "build/$dirName"
+                new File(outputDir).mkdir()
+                String outDir = outputDir + "/" + FilenameUtils.removeExtension(it.name)
+                new File(outDir).mkdir()
+                createFile(mapping, it, outDir + "/index.html")
+            }
+        }
+        root.eachFile {
+            if (!it.isDirectory() && it.name != 'index.html' && !it.name.startsWith('_')) {
+                String outDir = "build/" + FilenameUtils.removeExtension(it.name)
+                new File(outDir).mkdir()
+                createFile(mapping, it, outDir + "/index.html")
+            }
+        }
+    }
+
+    void createIndexHtml(Map<String, String> mapping) {
+        File index = new File("src/index.html")
+        if (!index.exists()) {
+            throw new RuntimeException("'index.html' must exist in you project. Create 'index.html' in 'src' folder.")
+        }
+        String indexPath = 'build/index.html'
+
+        createFile(mapping, index, indexPath)
+    }
+
+    Map<String, String> createMapping() {
+        Map<String, String> mapping = [:]
+        new File(".").eachFileRecurse(FILES) {
+            if (it.name.startsWith("_")) {
+                String key = FilenameUtils.removeExtension(it.name)
+                mapping.put(key, it.text)
+            }
+        }
+        mapping
+    }
+
+    void createFile(LinkedHashMap<String, String> mapping, File input, String outputPath) {
+        def builder = Context.newBuilder(mapping)
+        Context context = builder.resolver(MapValueResolver.INSTANCE).build()
+        Handlebars handlebars = new Handlebars().with(EscapingStrategy.NOOP)
+        Template template = handlebars.compileInline(input.text)
+
+        String apply = template.apply(context)
+        File output = new File(outputPath)
+        output.createNewFile()
+        output.text = apply
+    }
+}
+
+class DevelopWebTask extends WebTask {
+
+    @InputFiles
+    FileCollection srcFiles
+
+    @TaskAction
+    public void run() {
+        logger.info('Updating...')
+
+        File build = new File('build')
+        logger.info("build folder created: " + !build.mkdir())
+
+        Map<String, String> mapping = createMapping()
+        createIndexHtml(mapping)
+        createOtherHtml(mapping)
+
+        // copy gulp files
+        if (!new File("build/package.json").exists()) {
+            GFileUtils.copyFile(new File("package.json"), new File("build/package.json"))
+        }
+        if (!new File("build/gulpfile.js").exists()) {
+            GFileUtils.copyFile(new File("gulpfile.js"), new File("build/gulpfile.js"))
+        }
+
+    }
+}
+
+class BuildWebTask extends WebTask {
+
+    @InputFiles
+    FileCollection srcFiles
+
+    @TaskAction
+    public void run() {
+        logger.info('Createing production build.')
+        File build = new File('build')
+        build.deleteDir()
+
+        Map<String, String> mapping = createMapping()
+        createIndexHtml(mapping)
+        createOtherHtml(mapping)
+    }
+}
+
+project.tasks.create(name: 'copyAssets', type: Copy, group: 'Web') {
+    from 'src/assets'
+    into 'build/assets'
+}
+
+project.tasks.create(name: 'developWeb', type: DevelopWebTask, group: 'Web', dependsOn: 'copyAssets') {
+    srcFiles = files("src/")
+}
+
+project.tasks.create(name: 'buildWeb', type: BuildWebTask, group: 'Web', dependsOn: 'copyAssets') {
+    srcFiles = files("src/")
+}
