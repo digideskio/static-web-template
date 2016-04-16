@@ -104,7 +104,7 @@ class DevelopWebTask extends WebTask {
         logger.info('Updating...')
 
         File build = new File('build')
-        logger.info("build folder created: " + !build.mkdir())
+        logger.info("'build' folder created: " + !build.mkdir())
 
         Map<String, String> mapping = createMapping()
         createIndexHtml(mapping)
@@ -117,7 +117,6 @@ class DevelopWebTask extends WebTask {
         if (!new File("build/gulpfile.js").exists()) {
             GFileUtils.copyFile(new File("gulpfile.js"), new File("build/gulpfile.js"))
         }
-
     }
 }
 
