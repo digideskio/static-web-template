@@ -1,10 +1,14 @@
-Features
-========
+Static web template with _for my needs_ optimized templating engine. 
 
-- Reusable HTML files must start with underscore (e.g. ___head.html__)
-- To insert a reusable piece of code, insert `{{_head}}` into HTML file (_index.html_ for example)
+Conventions
+===========
+
+- Reusable HTML files must start with underscore (e.g. _head.html)
+- To insert a reusable piece of code, insert `{{_head}}` into HTML file (into _index.html_ for example)
 - Files must have unique names
 - Folder _assets_ is used for images, css and JS, it is copied as is
+- If you create HTML file with other name than _index.html_, for example _contact.html_. The template engine will create 
+new folder _contact_ and place _index.html_ into that folder.
 
 
 Installation
@@ -27,18 +31,18 @@ Running Development
 Gradle tasks
 ============
 
-`gradle copyAssets` 
+#### `gradle copyAssets` 
 
 Copies `src/assets` into `build/src/assets`
 
-`gradle -t developWeb`
+#### `gradle -t developWeb`
 
 Builds HTML web page into _build_ folder. `developWeb` task also copies gulpfile.js and package.json into _build_ folder. 
 It allows to go into _build_ folder `cd build` and run server to preview web page `cd build` and `gulp`. The web page is accessible on http://localhost:8080.
 `-t` starts Gradle in continuous mode and Gradle will watch changes you make. All changes will be immediately reflected
  in build folder and thus available on http://localhost:8080.
 
-### buildWeb
+#### `buildWeb`
 
 Builds HTML web page into _build_ folder. It is ready to be copied on a server.
 
