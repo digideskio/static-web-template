@@ -18,6 +18,8 @@ Installation
 1. Install Homebrew: `/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"`
 2. Install Gradle: `brew install gradle`
 3. Install NPM: https://nodejs.org
+4. Install Java: brew update && brew tap caskroom/cask && brew install Caskroom/cask/java
+5. Install Gulp: npm install -g gulp
 
 Running Development
 ===================
